@@ -4,7 +4,7 @@ dotenv.load_dotenv()
 
 config_path = str(pathlib.Path(__file__).parent.absolute()) + "/configs.json"
 
-client = interactions.Client(token=os.getenv("TOKEN"), default_scope=976256461887897650)
+client = interactions.Client(token=os.getenv("TOKEN"), default_scope=1167687057360027668)
 
 @interactions.slash_command(
     name = "ping",
