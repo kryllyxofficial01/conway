@@ -16,10 +16,10 @@ prefixed_commands.setup(client, default_prefix="!")
 
 @interactions.slash_command(
     name = "ping",
-    description = "Get the current latency of the bot."
+    description = "Returns the latency of the bot"
 )
 async def ping(context: SlashContext):
-    await context.send(f"{round(client.latency * 1000, 2)} ms")
+    await context.send(f"Ping: {round(context.bot.latency * 1000, 2)} ms")
 
 @interactions.slash_command(
     name = "playerlist",
@@ -68,24 +68,28 @@ async def playerlist(context: SlashContext):
     opt_type = OptionType.STRING
 )
 async def mcserver_config(context: SlashContext, config_name: str, config_value: str):
-    await context.defer()
+    operator_role = context.guild.get_role(1167687375913234464)
 
-    with open(config_path, "r") as config_file:
-        configs = json.load(config_file)
+    if context.author.has_role(operator_role):
+        with open(config_path, "r") as config_file:
+            configs = json.load(config_file)
 
-    configs[config_name] = config_value
+        configs[config_name] = config_value
 
-    with open(config_path, "w") as config_file:
-        json.dump(configs, config_file, indent=4)
+        with open(config_path, "w") as config_file:
+            json.dump(configs, config_file, indent=4)
 
-    await context.send(f"Updated '{config_name.capitalize()}' to be '{config_value}'")
+        await context.send(f"Updated '{config_name.capitalize()}' to be '{config_value}'")
+
+    else:
+        await context.send("You do not have permission to use that command.")
 
 @prefixed_command(name="ping")
-async def ping(context: PrefixedContext):
-    await context.reply(f"{round(client.latency * 1000, 2)} ms")
+async def ping_legacy(context: PrefixedContext):
+    await context.reply(f"Ping: {round(context.bot.latency * 1000, 2)} ms")
 
 @prefixed_command(name="playerlist")
-async def playerlist(context: PrefixedContext):
+async def playerlist_legacy(context: PrefixedContext):
     with open(config_path, "r") as config_file:
         configs = json.load(config_file)
 
@@ -102,19 +106,25 @@ async def playerlist(context: PrefixedContext):
     await context.reply(output)
 
 @prefixed_command(name="mcserver_config")
-async def mcserver_config(context: PrefixedContext, config_name: str, config_value: str):
-    with open(config_path, "r") as config_file:
-        configs = json.load(config_file)
+async def mcserver_config_legacy(context: PrefixedContext, config_name: str, config_value: str):
+    operator_role = context.guild.get_role(1167687375913234464)
 
-    if config_name in ("domain", "port"):
-        configs[config_name] = config_value
+    if context.author.has_role(operator_role):
+        with open(config_path, "r") as config_file:
+            configs = json.load(config_file)
 
-        with open(config_path, "w") as config_file:
-            json.dump(configs, config_file, indent=4)
+        if config_name in ("domain", "port"):
+            configs[config_name] = config_value
 
-        await context.reply(f"Updated '{config_name.capitalize()}' to be '{config_value}'")
+            with open(config_path, "w") as config_file:
+                json.dump(configs, config_file, indent=4)
+
+            await context.reply(f"Updated '{config_name.capitalize()}' to be '{config_value}'")
+
+        else:
+            await context.reply(f"No config name '{config_name}'")
 
     else:
-        await context.reply(f"No config name '{config_name}'")
+        await context.send("You do not have permission to use that command.")
 
 client.start()
