@@ -26,6 +26,8 @@ async def ping(context: SlashContext):
     description = "Get the list of players currently online."
 )
 async def playerlist(context: SlashContext):
+    await context.defer()
+
     with open(config_path, "r") as config_file:
         configs = json.load(config_file)
 
