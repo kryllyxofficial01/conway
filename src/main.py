@@ -7,6 +7,10 @@ dotenv.load_dotenv()
 
 config_path = str(pathlib.Path(__file__).parent.absolute()) + "/configs.json"
 
+if not os.path.exists(config_path):
+    with open(config_path, 'w') as file:
+        json.dump({}, file, indent=4)
+
 client = Client(
     token = os.getenv("TOKEN"),
     default_scope = 1167687057360027668,
