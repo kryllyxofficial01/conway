@@ -2,6 +2,7 @@ import interactions, mcstatus, json, pathlib, dotenv, os
 from interactions import Client, SlashContext, Intents, OptionType, SlashCommandChoice
 from interactions.ext import prefixed_commands
 from interactions.ext.prefixed_commands import prefixed_command, PrefixedContext
+import socket
 
 dotenv.load_dotenv()
 
@@ -35,17 +36,24 @@ async def playerlist(context: SlashContext):
     with open(config_path, "r") as config_file:
         configs = json.load(config_file)
 
-    mcserver = mcstatus.JavaServer(
-        host = configs["domain"],
-        port = int(configs["port"])
-    )
+    domain = configs["domain"]
+    port = int(configs["port"])
 
     try:
-        output = ", ".join([player.name for player in mcserver.status().players.sample])
-    except TypeError:
-        output = "No players are online."
+        mcserver = mcstatus.JavaServer(
+            host = domain,
+            port = port,
+        )
 
-    await context.send(output)
+        try:
+            output = ", ".join([player.name for player in mcserver.status().players.sample])
+        except TypeError:
+            output = "No players are online."
+
+        await context.send(output)
+
+    except TimeoutError:
+        await context.send("Invalid server domain and/or port configuration")
 
 @interactions.slash_command(
     name = "mcserver_config",
