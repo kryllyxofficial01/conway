@@ -84,27 +84,24 @@ async def playerlist(context: SlashContext):
 async def mcserver_config(context: SlashContext, config_name: str, config_value: str):
     operator_role = context.guild.get_role(1167687375913234464) # hard coded role ID because I'm lazy, shut up
 
-    valid_configs = ["domain", "port"]
-
     if context.author.has_role(operator_role):
         with open(config_path, "r") as config_file:
             configs = json.load(config_file)
 
-        if config_name in valid_configs:
-            error = False
-            if config_name == "port":
-                try: config_value = int(config_value)
-                except ValueError:
-                    await context.send("Port must be an integer")
-                    error = True
+        error = False
+        if config_name == "port":
+            try: config_value = int(config_value)
+            except ValueError:
+                await context.send("Port must be an integer")
+                error = True
 
-            if not error:
-                configs[config_name] = config_value
+        if not error:
+            configs[config_name] = config_value
 
-                with open(config_path, "w") as config_file:
-                    json.dump(configs, config_file, indent=4)
+            with open(config_path, "w") as config_file:
+                json.dump(configs, config_file, indent=4)
 
-                await context.send(f"Updated '{config_name.capitalize()}' to be '{config_value}'")
+            await context.send(f"Updated '{config_name.capitalize()}' to be '{config_value}'")
 
     else:
         await context.send("You do not have permission to use that command.")
@@ -118,38 +115,52 @@ async def playerlist_legacy(context: PrefixedContext):
     with open(config_path, "r") as config_file:
         configs = json.load(config_file)
 
-    mcserver = mcstatus.JavaServer(
-        host = configs["domain"],
-        port = int(configs["port"])
-    )
+    domain = configs["domain"]
+    port = configs["port"]
 
     try:
-        output = ", ".join([player.name for player in mcserver.status().players.sample])
-    except TypeError:
-        output = "No players are online."
+        mcserver = mcstatus.JavaServer(
+            host = domain,
+            port = port,
+        )
 
-    await context.reply(output)
+        try:
+            output = ", ".join([player.name for player in mcserver.status().players.sample])
+        except TypeError:
+            output = "No players are online."
+
+        await context.reply(output)
+
+    except TimeoutError: # waits 3 seconds
+        await context.reply("Connection timed out, likely due to an invalid server domain and/or port configuration")
 
 @prefixed_command(name="mcserver_config")
 async def mcserver_config_legacy(context: PrefixedContext, config_name: str, config_value: str):
-    operator_role = context.guild.get_role(1167687375913234464)
+    operator_role = context.guild.get_role(1167687375913234464) # hard coded role ID because I'm lazy, shut up
+
+    valid_configs = ["domain", "port"]
 
     if context.author.has_role(operator_role):
         with open(config_path, "r") as config_file:
             configs = json.load(config_file)
 
-        if config_name in ("domain", "port"):
-            configs[config_name] = config_value
+        if config_name in valid_configs:
+            error = False
+            if config_name == "port":
+                try: config_value = int(config_value)
+                except ValueError:
+                    await context.reply("Port must be an integer")
+                    error = True
 
-            with open(config_path, "w") as config_file:
-                json.dump(configs, config_file, indent=4)
+            if not error:
+                configs[config_name] = config_value
 
-            await context.reply(f"Updated '{config_name.capitalize()}' to be '{config_value}'")
+                with open(config_path, "w") as config_file:
+                    json.dump(configs, config_file, indent=4)
 
-        else:
-            await context.reply(f"No config name '{config_name}'")
+                await context.reply(f"Updated '{config_name.capitalize()}' to be '{config_value}'")
 
-    else:
-        await context.send("You do not have permission to use that command.")
+        else: await context.reply(f"Invalid config '{config_name}'")
+    else: await context.reply("You do not have permission to use that command.")
 
 client.start()
