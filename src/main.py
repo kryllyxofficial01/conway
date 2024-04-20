@@ -2,7 +2,7 @@ import interactions, mcstatus, json, pathlib, dotenv, os
 from interactions import Client, SlashContext, Intents, OptionType, SlashCommandChoice
 from interactions.ext import prefixed_commands
 from interactions.ext.prefixed_commands import prefixed_command, PrefixedContext
-import typing
+import typing, ipaddress
 
 dotenv.load_dotenv()
 
@@ -96,7 +96,14 @@ async def mcserver_config(context: SlashContext, config_name: str, config_value:
             configs = json.load(config_file)
 
         error = False
-        if config_name == "port":
+        if config_name == "domain":
+            try: ipaddress.ip_address(config_value)
+            except ValueError:
+                print(f"\033[1;33m/mcserver_config\033[0;0m: Prior call contained an \033[1;31minvalid domain ({config_value})\033[0;0m")
+                await context.send("Port must be a valid domain")
+                error = True
+
+        elif config_name == "port":
             try: config_value = int(config_value)
 
             except ValueError:
@@ -109,7 +116,6 @@ async def mcserver_config(context: SlashContext, config_name: str, config_value:
                     print(f"\033[1;33m/mcserver_config\033[0;0m: Prior call contained an \033[1;31minvalid port ({config_value})\033[0;0m")
                     await context.send("Port must be greater than 0 and less than 65535")
                     error = True
-
 
         if not error:
             configs[config_name] = config_value
@@ -179,7 +185,14 @@ async def mcserver_config_legacy(context: PrefixedContext, config_name: typing.O
 
             if config_name in valid_configs:
                 error = False
-                if config_name == "port":
+                if config_name == "domain":
+                    try: ipaddress.ip_address(config_value)
+                    except ValueError:
+                        print(f"\033[1;33m/mcserver_config\033[0;0m: Prior call contained an \033[1;31minvalid domain ({config_value})\033[0;0m")
+                        await context.reply("Port must be a valid domain")
+                        error = True
+
+                elif config_name == "port":
                     try: config_value = int(config_value)
 
                     except ValueError:
