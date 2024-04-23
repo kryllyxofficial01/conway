@@ -135,7 +135,7 @@ async def mcserver_config(context: SlashContext, config_name: str, config_value:
             await context.send(f"Updated '{config_name.capitalize()}' to be '{config_value}'")
 
     else:
-        print("{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call \033[1;31mnot permitted\033[0;0m")
+        print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call \033[1;31mnot permitted\033[0;0m")
 
         await context.send("You do not have permission to use that command.")
 
