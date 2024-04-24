@@ -47,7 +47,8 @@ async def playerlist(context: SlashContext):
 
         try: output = ", ".join([player.name for player in mcserver.status().players.sample])
         except TypeError: output = "No players are online."
-        else: await context.send(output)
+
+        await context.send(output)
 
     except:
         print(f"{utils.get_current_time()} | \033[1;33m/playerlist\033[0;0m: Prior call \033[1;31mtimed out\033[0;0m")
@@ -152,15 +153,15 @@ async def playerlist_legacy(context: PrefixedContext):
             port = port,
         )
 
+        try: output = ", ".join([player.name for player in mcserver.status().players.sample])
+        except TypeError: output = "No players are online."
+
+        await context.reply(output)
+
     except:
         print(f"{utils.get_current_time()} | \033[1;33m/playerlist\033[0;0m: Prior call \033[1;31mtimed out\033[0;0m")
 
         await context.reply("Connection timed out, likely due to an invalid server domain and/or port configuration")
-
-    else:
-        try: output = ", ".join([player.name for player in mcserver.status().players.sample])
-        except TypeError: output = "No players are online."
-        else: await context.reply(output)
 
 @prefixed_command(name="mcserver_config")
 async def mcserver_config_legacy(context: PrefixedContext, config_name: typing.Optional[str], config_value = None):
