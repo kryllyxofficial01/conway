@@ -4,7 +4,7 @@ from datetime import datetime
 CONFIG_PATH = str(pathlib.Path(__file__).parent.absolute()) + "/configs.json"
 
 def get_current_time() -> str:
-    return datetime.now().strftime("%H:%M:%S.%f")
+    return datetime.now().strftime("%m/%d/%Y %H:%M:%S.%f")
 
 def log_command_call(command_name: str, caller: str, is_slash_command: bool = True) -> str:
     current_time = get_current_time()
