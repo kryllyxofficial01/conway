@@ -2,6 +2,7 @@ import json, pathlib
 from datetime import datetime
 
 CONFIG_PATH = str(pathlib.Path(__file__).parent.absolute()) + "/configs.json"
+OPERATOR_ROLE_ID = 1167687375913234464
 
 def get_current_time() -> str:
     return datetime.now().strftime("%m/%d/%Y %H:%M:%S.%f")

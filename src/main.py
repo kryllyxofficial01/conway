@@ -1,8 +1,8 @@
-import mcstatus, dotenv, os, typing, ipaddress, utils
+import mcstatus, dotenv, os, typing, ipaddress, utils, commands
 from interactions import slash_command, slash_option, Client, SlashContext, Intents, OptionType, SlashCommandChoice
 from interactions.ext import prefixed_commands
 from interactions.ext.prefixed_commands import prefixed_command, PrefixedContext
-from utils import CONFIG_PATH
+from utils import CONFIG_PATH, OPERATOR_ROLE_ID
 
 dotenv.load_dotenv()
 
@@ -34,26 +34,7 @@ async def playerlist(context: SlashContext):
 
     print(utils.log_command_call("playerlist", context.author.username))
 
-    configs = utils.load_config()
-
-    domain = configs["domain"]
-    port = configs["port"]
-
-    try:
-        mcserver = mcstatus.JavaServer(
-            host = domain,
-            port = port
-        )
-
-        try: output = ", ".join([player.name for player in mcserver.status().players.sample])
-        except TypeError: output = "No players are online."
-
-        await context.send(output)
-
-    except:
-        print(f"{utils.get_current_time()} | \033[1;33m/playerlist\033[0;0m: Prior call \033[1;31mtimed out\033[0;0m")
-
-        await context.send("Connection timed out, likely due to an invalid server domain and/or port configuration")
+    await context.send(commands.get_playerlist())
 
 @slash_command(
     name = "mcserver_config",
@@ -84,53 +65,16 @@ async def playerlist(context: SlashContext):
 async def mcserver_config(context: SlashContext, config_name: str, config_value: str):
     print(utils.log_command_call("mcserver_config", context.author.username))
 
-    operator_role = context.guild.get_role(1167687375913234464) # hard coded role ID because I'm lazy, shut up
+    operator_role = context.guild.get_role(OPERATOR_ROLE_ID) # hard coded role ID because I'm lazy, shut up
 
+    output = ""
     if context.author.has_role(operator_role):
-        configs = utils.load_config()
-
-        error = False
-        if config_name == "domain":
-            try: ipaddress.ip_address(config_value)
-
-            except ValueError:
-                error = True
-
-                print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call contained an \033[1;31minvalid domain ({config_value})\033[0;0m")
-
-                await context.send("Must be a valid domain")
-
-        elif config_name == "port":
-            try: config_value = int(config_value)
-
-            except ValueError:
-                error = True
-
-                print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call contained a \033[1;31mnon-integer port ({config_value})\033[0;0m")
-
-                await context.send("Port must be an integer")
-
-            else:
-               if config_value < 0 or config_value > 65535: # max port value
-                    error = True
-
-                    print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call contained an \033[1;31minvalid port ({config_value})\033[0;0m")
-
-                    await context.send("Port must be greater than 0 and less than 65535")
-
-        if not error:
-            configs[config_name] = config_value
-
-            utils.refresh_config(configs)
-
-            print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call changed \033[0;32m{config_name.capitalize()}\033[0;0m to \033[0;32m{config_value}\033[0;0m")
-
-            await context.send(f"Updated '{config_name.capitalize()}' to be '{config_value}'")
-
+        output = commands.change_mcserver_config(config_name, config_value)
     else:
         print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call \033[1;31mnot permitted\033[0;0m")
+        output = "You do not have permission to use that command."
 
-        await context.send("You do not have permission to use that command.")
+    await context.send(output)
 
 @prefixed_command(name="ping")
 async def ping_legacy(context: PrefixedContext):
@@ -142,91 +86,30 @@ async def ping_legacy(context: PrefixedContext):
 async def playerlist_legacy(context: PrefixedContext):
     print(utils.log_command_call("playerlist", context.author.username, is_slash_command=False))
 
-    configs = utils.load_config()
-
-    domain = configs["domain"]
-    port = configs["port"]
-
-    try:
-        mcserver = mcstatus.JavaServer(
-            host = domain,
-            port = port,
-        )
-
-        try: output = ", ".join([player.name for player in mcserver.status().players.sample])
-        except TypeError: output = "No players are online."
-
-        await context.reply(output)
-
-    except:
-        print(f"{utils.get_current_time()} | \033[1;33m/playerlist\033[0;0m: Prior call \033[1;31mtimed out\033[0;0m")
-
-        await context.reply("Connection timed out, likely due to an invalid server domain and/or port configuration")
+    await context.reply(commands.get_playerlist(is_slash_command=False))
 
 @prefixed_command(name="mcserver_config")
 async def mcserver_config_legacy(context: PrefixedContext, config_name: typing.Optional[str], config_value = None):
     print(utils.log_command_call("mcserver_config", context.author.username, is_slash_command=False))
 
+    valid_configs = ["domain", "port"]
+    operator_role = context.guild.get_role(OPERATOR_ROLE_ID)
+
     if config_name == None:
         print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call \033[1;31mmissing configuration name\033[0;0m")
-
-        await context.reply("You must provide a configuration")
+        output = "You must provide a configuration"
 
     elif config_value == None:
         print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call \033[1;31mmissing configuration value\033[0;0m")
-
-        await context.reply("You must provide a value to set the configuration to")
+        output = "You must provide a value to set the configuration to"
 
     else:
-        operator_role = context.guild.get_role(1167687375913234464)
-
-        valid_configs = ["domain", "port"]
-
         if context.author.has_role(operator_role):
-            configs = utils.load_config()
-
-            if config_name in valid_configs:
-                error = False
-                if config_name == "domain":
-                    try: ipaddress.ip_address(config_value)
-
-                    except ValueError:
-                        error = True
-
-                        print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call contained an \033[1;31minvalid domain ({config_value})\033[0;0m")
-
-                        await context.reply("Port must be a valid domain")
-
-                elif config_name == "port":
-                    try: config_value = int(config_value)
-
-                    except ValueError:
-                        error = True
-
-                        print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call contained a \033[1;31mnon-integer port ({config_value})\033[0;0m")
-
-                        await context.reply("Port must be an integer")
-
-                    else:
-                        if config_value < 0 or config_value > 65535:
-                            error = True
-
-                            print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call contained an \033[1;31minvalid port ({config_value})\033[0;0m")
-
-                            await context.reply("Port must be greater than 0 and less than 65535")
-
-                if not error:
-                    configs[config_name] = config_value
-
-                    utils.refresh_config(configs)
-
-                    print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call changed \033[0;32m{config_name.capitalize()}\033[0;0m to \033[0;32m{config_value}\033[0;0m")
-
-                    await context.reply(f"Updated '{config_name.capitalize()}' to be '{config_value}'")
-
+            output = commands.change_mcserver_config(config_name, config_value, is_slash_command=False)
         else:
             print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call \033[1;31mnot permitted\033[0;0m")
+            output = "You do not have permission to use that command."
 
-            await context.reply("You do not have permission to use that command.")
+    await context.reply(output)
 
 client.start()
