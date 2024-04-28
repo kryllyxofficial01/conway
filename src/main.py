@@ -1,4 +1,4 @@
-import mcstatus, dotenv, os, typing, ipaddress, utils, commands
+import dotenv, os, typing, utils, commands
 from interactions import slash_command, slash_option, Client, SlashContext, Intents, OptionType, SlashCommandChoice
 from interactions.ext import prefixed_commands
 from interactions.ext.prefixed_commands import prefixed_command, PrefixedContext
