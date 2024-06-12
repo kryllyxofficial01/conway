@@ -1,8 +1,6 @@
-import utils, mcstatus, ipaddress
+import utils, mcstatus, ipaddress, interactions
 
 def get_playerlist(is_slash_command = True) -> str:
-    prefix = "/" if is_slash_command else "!"
-
     configs = utils.load_config()
 
     domain = configs["domain"]
@@ -20,12 +18,10 @@ def get_playerlist(is_slash_command = True) -> str:
         return output
 
     except:
-        print(f"{utils.get_current_time()} | \033[1;33m{prefix}playerlist\033[0;0m: Prior call \033[1;31mtimed out\033[0;0m")
+        print(utils.log_message("playerlist", "Prior call \033[1;31mtimed out\033[0;0m", is_slash_command))
         return "Connection timed out, likely due to an invalid server domain and/or port configuration"
 
-def change_mcserver_config(config_name: str, config_value: str, is_slash_command=True) -> str:
-    prefix = "/" if is_slash_command else "!"
-
+def change_mcserver_config(config_name: str, config_value: str, is_slash_command = True) -> str:
     configs = utils.load_config()
 
     error = False
@@ -36,7 +32,12 @@ def change_mcserver_config(config_name: str, config_value: str, is_slash_command
         except ValueError:
             error = True
 
-            print(f"{utils.get_current_time()} | \033[1;33m{prefix}mcserver_config\033[0;0m: Prior call contained an \033[1;31minvalid domain ({config_value})\033[0;0m")
+            print(utils.log_message(
+                "mcserver_config",
+                f"Prior call contained an \033[1;31minvalid domain ('{config_value}')\033[0;0m",
+                is_slash_command
+            ))
+
             output = "Must be a valid domain"
 
     elif config_name == "port":
@@ -45,21 +46,73 @@ def change_mcserver_config(config_name: str, config_value: str, is_slash_command
         except ValueError:
             error = True
 
-            print(f"{utils.get_current_time()} | \033[1;33m{prefix}mcserver_config\033[0;0m: Prior call contained a \033[1;31mnon-integer port ({config_value})\033[0;0m")
+            print(utils.log_message(
+                "mcserver_config",
+                f"Prior call contained a \033[1;31mnon-integer port ('{config_value}')\033[0;0m",
+                is_slash_command
+            ))
+
             output = "Port must be an integer"
 
         else:
-            if config_value < 0 or config_value > 65535: # max port value
+            if config_value < 0 or config_value > 65535:
                 error = True
 
-                print(f"{utils.get_current_time()} | \033[1;33m{prefix}mcserver_config\033[0;0m: Prior call contained an \033[1;31minvalid port ({config_value})\033[0;0m")
+                print(utils.log_message(
+                    "mcserver_config",
+                    f"Prior call contained an \033[1;31minvalid port ('{config_value}')\033[0;0m",
+                    is_slash_command
+                ))
+
                 output = "Port must be greater than 0 and less than 65535"
 
     if not error:
         configs[config_name] = config_value
         utils.refresh_config(configs)
 
-        print(f"{utils.get_current_time()} | \033[1;33m{prefix}mcserver_config\033[0;0m: Prior call changed \033[0;32m{config_name.capitalize()}\033[0;0m to \033[0;32m{config_value}\033[0;0m")
+        print(utils.log_message(
+            "mcserver_config",
+            f"Prior call changed \033[0;32m'{config_name.capitalize()}'\033[0;0m to \033[0;32m'{config_value}'\033[0;0m",
+            is_slash_command
+        ))
+
         output = f"Updated '{config_name.capitalize()}' to be '{config_value}'"
 
     return output
+
+def get_strikes(guild: interactions.Guild) -> str:
+    strikes = utils.get_strikes()
+
+    output = []
+    for user_id in strikes:
+        member = guild.get_member(int(user_id))
+        strike_count = strikes[user_id]
+
+        output.append(f"{member.username} ({member.display_name}): {strike_count}")
+
+    return "\n".join(output)
+
+def add_strikes(user_id: int, strikes: int, guild: interactions.Guild, is_slash_command = True) -> str:
+    user_strikes = utils.get_strikes()
+
+    new_strikes = user_strikes[str(user_id)] + strikes
+    user_strikes[str(user_id)] = new_strikes
+
+    utils.update_strikes(user_strikes)
+
+    print(utils.log_message(
+        "strikes add",
+        f"Prior call gave \033[0;32m'{guild.get_member(user_id).username}'\033[0;0m \033[0;32m{strikes} strike{'s' if strikes != 1 else ''}\033[0;0m",
+        is_slash_command
+    ))
+
+    return f"Gave '{guild.get_member(user_id).display_name}' {strikes} strike{'s' if abs(strikes) != 1 else ''}\nThey are now at {new_strikes} total"
+
+def clear_strikes(is_slash_command = True) -> str:
+    strikes = utils.get_strikes()
+
+    utils.update_strikes(dict.fromkeys(strikes, 0))
+
+    print(utils.log_message("strikes clear", "Prior call \033[0;32mcleared all user strikes\033[0;0m", is_slash_command))
+
+    return "All strikes cleared"

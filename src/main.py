@@ -1,8 +1,9 @@
 import dotenv, os, typing, utils, commands
-from interactions import slash_command, slash_option, Client, SlashContext, Intents, OptionType, SlashCommandChoice
+from interactions import slash_command, slash_option, Client, SlashCommand, SlashContext, SlashCommandChoice, OptionType
+from interactions import Intents, Member
 from interactions.ext import prefixed_commands
 from interactions.ext.prefixed_commands import prefixed_command, PrefixedContext
-from utils import CONFIG_PATH, OPERATOR_ROLE_ID
+from utils import CONFIG_PATH, STRIKES_PATH, OPERATOR_ROLE_ID
 
 dotenv.load_dotenv()
 
@@ -11,10 +12,15 @@ if not os.path.exists(CONFIG_PATH):
 
 client = Client(
     token = os.getenv("TOKEN"),
-    intents = Intents.GUILDS | Intents.MESSAGE_CONTENT | Intents.GUILD_MESSAGES,
-    send_command_tracebacks = False # go go gadget stacktrace dump
+    intents = Intents.ALL,
+    send_command_tracebacks = False # go go gadget remove stacktrace dumps
 )
 prefixed_commands.setup(client, default_prefix="!")
+
+strikes_base = SlashCommand(
+    name = "strikes",
+    description = "Handle strikes"
+)
 
 @slash_command(
     name = "ping",
@@ -65,16 +71,87 @@ async def playerlist(context: SlashContext):
 async def mcserver_config(context: SlashContext, config_name: str, config_value: str):
     print(utils.log_command_call("mcserver_config", context.author.username))
 
-    operator_role = context.guild.get_role(OPERATOR_ROLE_ID) # hard coded role ID because I'm lazy, shut up
+    operator_role = context.guild.get_role(OPERATOR_ROLE_ID)
 
-    output = ""
     if context.author.has_role(operator_role):
-        output = commands.change_mcserver_config(config_name, config_value)
+        await context.send(commands.change_mcserver_config(config_name, config_value))
     else:
-        print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call \033[1;31mnot permitted\033[0;0m")
-        output = "You do not have permission to use that command."
+        print(utils.log_message("mcserver_config", "Prior call \033[1;31mnot permitted\033[0;0m", True))
+        await context.send("You do not have permission to use that command.")
 
-    await context.send(output)
+@strikes_base.subcommand(
+    sub_cmd_name = "view",
+    sub_cmd_description = "Get the strike counts of every player"
+)
+@slash_option(
+    name = "user",
+    description = "User to view the strikes of",
+    required = False,
+    opt_type = OptionType.MENTIONABLE
+)
+async def strikes_view(context: SlashContext, user: Member = None):
+    print(utils.log_command_call("strikes view", context.author.username))
+
+    operator_role = context.guild.get_role(OPERATOR_ROLE_ID)
+
+    if context.author.has_role(operator_role):
+        if user == None: await context.send(commands.get_strikes(context.guild))
+        else:
+            strikes = utils.get_strikes()
+
+            print(utils.log_message(
+                "strikes view",
+                f"Prior call \033[0;32mrequested strikes for '{user.username}'\033[0;0m",
+                True
+            ))
+
+            await context.send(f"{user.username} ({user.display_name}): {strikes[str(user.id)]}")
+
+    else:
+        print(utils.log_message("strikes view", "Prior call \033[1;31mnot permitted\033[0;0m", True))
+        await context.send("You do not have permission to use that command.")
+
+@strikes_base.subcommand(
+    sub_cmd_name = "add",
+    sub_cmd_description = "Add strikes to a player"
+)
+@slash_option(
+    name = "user",
+    description = "User to add strikes to",
+    required = True,
+    opt_type = OptionType.MENTIONABLE
+)
+@slash_option(
+    name = "strikes",
+    description = "Number of strikes to add",
+    required = True,
+    opt_type = OptionType.INTEGER
+)
+async def strikes_add(context: SlashContext, user: Member, strikes: int):
+    print(utils.log_command_call("strikes add", context.author.username))
+
+    operator_role = context.guild.get_role(OPERATOR_ROLE_ID)
+
+    if context.author.has_role(operator_role):
+        await context.send(commands.add_strikes(user.id, strikes, context.guild))
+    else:
+        print(utils.log_message("strikes add", "Prior call \033[1;31mnot permitted\033[0;0m", True))
+        await context.send("You do not have permission to use that command.")
+
+@strikes_base.subcommand(
+    sub_cmd_name = "clear",
+    sub_cmd_description = "Clear all strikes"
+)
+async def strikes_clear(context: SlashContext):
+    print(utils.log_command_call("strikes clear", context.author.username))
+
+    operator_role = context.guild.get_role(OPERATOR_ROLE_ID)
+
+    if context.author.has_role(operator_role):
+        await context.send(commands.clear_strikes())
+    else:
+        print(utils.log_message("strikes clear", "Prior call \033[1;31mnot permitted\033[0;0m", True))
+        await context.send("You do not have permission to use that command.")
 
 @prefixed_command(name="ping")
 async def ping_legacy(context: PrefixedContext):
@@ -96,20 +173,38 @@ async def mcserver_config_legacy(context: PrefixedContext, config_name: typing.O
     operator_role = context.guild.get_role(OPERATOR_ROLE_ID)
 
     if config_name == None:
-        print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call \033[1;31mmissing configuration name\033[0;0m")
-        output = "You must provide a configuration"
+        print(utils.log_message(
+            "mcserver_config",
+            "Prior call \033[1;31mmissing configuration name\033[0;0m",
+            False
+        ))
+
+        await context.send("You must provide a configuration")
 
     elif config_value == None:
-        print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call \033[1;31mmissing configuration value\033[0;0m")
-        output = "You must provide a value to set the configuration to"
+        print(utils.log_message(
+            "mcserver_config",
+            "Prior call \033[1;31mmissing configuration value\033[0;0m",
+            False
+        ))
+
+        await context.send("You must provide a value to set the configuration to")
 
     else:
         if context.author.has_role(operator_role):
-            output = commands.change_mcserver_config(config_name, config_value, is_slash_command=False)
-        else:
-            print(f"{utils.get_current_time()} | \033[1;33m/mcserver_config\033[0;0m: Prior call \033[1;31mnot permitted\033[0;0m")
-            output = "You do not have permission to use that command."
+            if config_name in valid_configs:
+                await context.send(commands.change_mcserver_config(config_name, config_value, is_slash_command=False))
+            else:
+                print(utils.log_message(
+                    "mcserver_config",
+                    f"Prior call contained \033[1;31minvalid config name ('{config_name}')\033[0;0m",
+                    False
+                ))
 
-    await context.reply(output)
+                await context.send("Invalid config name")
+
+        else:
+            print(utils.log_message("mcserver_config", "Prior call \033[1;31mnot permitted\033[0;0m", False))
+            await context.send("You do not have permission to use that command.")
 
 client.start()
