@@ -108,11 +108,28 @@ def add_strikes(user_id: int, strikes: int, guild: interactions.Guild, is_slash_
 
     return f"Gave '{guild.get_member(user_id).display_name}' {strikes} strike{'s' if abs(strikes) != 1 else ''}\nThey are now at {new_strikes} total"
 
-def clear_strikes(is_slash_command = True) -> str:
+def refresh_strikes(guild: interactions.Guild, is_slash_command = True) -> str:
     strikes = utils.get_strikes()
 
-    utils.update_strikes(dict.fromkeys(strikes, 0))
+    strikes = dict.fromkeys(strikes, 0)
 
     print(utils.log_message("strikes clear", "Prior call \033[0;32mcleared all user strikes\033[0;0m", is_slash_command))
 
-    return "All strikes cleared"
+    members = guild.members
+
+    for member in members:
+        if not member.bot and not member.has_role(utils.ALT_ROLE_ID):
+            if str(member.id) not in strikes.keys():
+                strikes[str(member.id)] = 0
+
+    to_be_removed = []
+    for user_id in strikes.keys():
+        if user_id not in [str(member.id) for member in members]:
+            to_be_removed.append(user_id)
+
+    for user_id in to_be_removed:
+        strikes.pop(user_id)
+
+    utils.update_strikes(strikes)
+
+    return "All strikes cleared\nUser list refreshed"

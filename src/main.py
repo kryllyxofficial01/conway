@@ -139,18 +139,18 @@ async def strikes_add(context: SlashContext, user: Member, strikes: int):
         await context.send("You do not have permission to use that command.")
 
 @strikes_base.subcommand(
-    sub_cmd_name = "clear",
-    sub_cmd_description = "Clear all strikes"
+    sub_cmd_name = "refresh",
+    sub_cmd_description = "Clear all strikes and refresh user list"
 )
-async def strikes_clear(context: SlashContext):
-    print(utils.log_command_call("strikes clear", context.author.username))
+async def strikes_refresh(context: SlashContext):
+    print(utils.log_command_call("strikes refresh", context.author.username))
 
     operator_role = context.guild.get_role(OPERATOR_ROLE_ID)
 
     if context.author.has_role(operator_role):
-        await context.send(commands.clear_strikes())
+        await context.send(commands.refresh_strikes(context.guild))
     else:
-        print(utils.log_message("strikes clear", "Prior call \033[1;31mnot permitted\033[0;0m", True))
+        print(utils.log_message("strikes refresh", "Prior call \033[1;31mnot permitted\033[0;0m", True))
         await context.send("You do not have permission to use that command.")
 
 @prefixed_command(name="ping")

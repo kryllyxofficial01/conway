@@ -5,6 +5,7 @@ CONFIG_PATH = str(pathlib.Path(__file__).parent.absolute()) + "/data/configs.jso
 STRIKES_PATH = str(pathlib.Path(__file__).parent.absolute()) + "/data/strikes.json"
 
 OPERATOR_ROLE_ID = 1167687375913234464
+ALT_ROLE_ID = 1212783196920356965
 
 def get_current_time() -> str:
     return datetime.now().strftime("%m/%d/%Y %H:%M:%S.%f")
