@@ -113,7 +113,7 @@ def refresh_strikes(guild: interactions.Guild, is_slash_command = True) -> str:
 
     strikes = dict.fromkeys(strikes, 0)
 
-    print(utils.log_message("strikes clear", "Prior call \033[0;32mcleared all user strikes\033[0;0m", is_slash_command))
+    print(utils.log_message("strikes refresh", "Prior call \033[0;32mcleared all user strikes\033[0;0m", is_slash_command))
 
     members = guild.members
 
@@ -129,6 +129,8 @@ def refresh_strikes(guild: interactions.Guild, is_slash_command = True) -> str:
 
     for user_id in to_be_removed:
         strikes.pop(user_id)
+
+    print(utils.log_message("strikes refresh", "Prior call \033[0;32mrefreshed user list\033[0;0m", is_slash_command))
 
     utils.update_strikes(strikes)
 
